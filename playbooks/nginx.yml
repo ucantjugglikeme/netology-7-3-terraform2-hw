@@ -1,0 +1,24 @@
+---
+- name: Deploy Nginx in webservers
+  gather_facts: false
+  hosts: webservers
+  vars:
+    ansible_ssh_user: user
+  become: true
+
+  pre_tasks:
+    - name: Wait for 300 seconds for ssh to become open
+      ansible.builtin.wait_for:
+        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
+        port: 22
+        delay: 10
+        timeout: 300
+        state: started
+        search_regex: OpenSSH
+
+  tasks:
+    - name: Update cache and install Nginx using apt
+      ansible.builtin.apt:
+        name: nginx=1.24.0-2ubuntu7.17
+        state: present
+        update_cache: yes
