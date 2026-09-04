@@ -7,14 +7,10 @@
   become: true
 
   pre_tasks:
-    - name: Wait for 300 seconds for ssh to become open
-      ansible.builtin.wait_for:
-        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
-        port: 22
-        delay: 10
+    - name: Wait for webservers to become reachable via Bastion
+      ansible.builtin.wait_for_connection:
+        delay: 0
         timeout: 300
-        state: started
-        search_regex: OpenSSH
 
   tasks:
     - name: Update cache and install Nginx using apt

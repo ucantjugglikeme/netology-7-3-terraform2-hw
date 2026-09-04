@@ -92,3 +92,15 @@ resource "yandex_vpc_security_group" "web_sg" {
     port           = 443
   }
 }
+
+resource "yandex_vpc_security_group" "db_sg" {
+  name        = "db-sg"
+  network_id  = yandex_vpc_network.test_net.id
+
+  ingress {
+    protocol          = "TCP"
+    description       = "Allow PostgreSQL from Web Servers"
+    security_group_id = yandex_vpc_security_group.web_sg.id
+    port              = 5432
+  }
+}

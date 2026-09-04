@@ -1,0 +1,28 @@
+---
+- name: Deploy PostgreSQL in VM
+  gather_facts: false
+  hosts: databases
+  vars:
+    ansible_ssh_user: user
+  become: true
+
+  pre_tasks:
+    - name: Wait for databases to become reachable via Bastion
+      ansible.builtin.wait_for_connection:
+        delay: 0
+        timeout: 300
+
+  tasks:
+    - name: Update cache and install PostgreSQL using apt
+      ansible.builtin.apt:
+        pkg:
+          - postgresql=16+257build1.1
+          - postgresql-contrib=16+257build1.1
+        state: present
+        update_cache: yes
+
+    - name: Start and enable PostgreSQL
+      ansible.builtin.systemd_service:
+        name: postgresql
+        state: started
+        enabled: true

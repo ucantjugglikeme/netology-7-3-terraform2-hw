@@ -107,6 +107,41 @@ resource "yandex_compute_instance" "web_a" {
   }
 }
 
+resource "yandex_compute_instance" "db_d" {
+  name        = "db-d"
+  hostname    = "db-d"
+  platform_id = "standard-v3"
+  zone        = "ru-central1-d"
+
+   resources {
+    cores         = 2
+    memory        = 1
+    core_fraction = 20
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = data.yandex_compute_image.ubuntu_24_lts.image_id
+      type     = "network-hdd"
+      size     = 10
+    }
+  }
+
+  network_interface {
+    subnet_id          = yandex_vpc_subnet.test_subnet_d.id
+    nat                = false
+    security_group_ids = [yandex_vpc_security_group.local_sg.id, yandex_vpc_security_group.db_sg.id]
+  }
+
+  metadata = {
+    user-data = "${file("./cloud-init.yml")}"
+  }
+}
+
 resource "local_file" "inventory" {
   content = <<-XYZ
   [bastion]
@@ -116,7 +151,12 @@ resource "local_file" "inventory" {
   ${yandex_compute_instance.web_a.network_interface.0.ip_address}
   ${yandex_compute_instance.web_d.network_interface.0.ip_address}
   [webservers:vars]
-  ansible_ssh_common_args='-o ProxyCommand="ssh -p 22 -W %h:%p -q user@${yandex_compute_instance.bastion_vm.network_interface.0.nat_ip_address}"'
+  ansible_ssh_common_args='-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p user@${yandex_compute_instance.bastion_vm.network_interface.0.nat_ip_address}"'
+
+  [databases]
+  ${yandex_compute_instance.db_d.network_interface.0.ip_address}
+  [databases:vars]
+  ansible_ssh_common_args='-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p user@${yandex_compute_instance.bastion_vm.network_interface.0.nat_ip_address}"'
   XYZ
   filename = "./inventories/production/hosts.ini"
 }
